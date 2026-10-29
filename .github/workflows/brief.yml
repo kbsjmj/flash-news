@@ -1,0 +1,46 @@
+name: brief
+
+on:
+  workflow_dispatch:
+    inputs:
+      window:
+        description: "분석 구간 (분)"
+        type: choice
+        options: ["30", "60"]
+        default: "30"
+
+permissions:
+  contents: write
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 설치
+        run: pip install -r requirements.txt
+
+      - name: 번개시황뉴스 실행
+        env:
+          WINDOW_MIN: ${{ inputs.window }}
+          KIWOOM_APPKEY: ${{ secrets.KIWOOM_APPKEY }}
+          KIWOOM_SECRETKEY: ${{ secrets.KIWOOM_SECRETKEY }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python brief.py
+
+      - name: 결과 저장 (커밋)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output
+          git diff --cached --quiet || git commit -m "brief $(date -u +%Y%m%d_%H%M) ${{ inputs.window }}m"
+          git push
